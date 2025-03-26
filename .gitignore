@@ -1,5 +1,5 @@
 **/.DS_STORE
-**/.vscode
+**/.vscode/
 **/.editorconfig
 **/dist/
 **/bazel-out
