@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors"
-import bodyParser from 'body-parser'
 import pkg from 'pg';
 const { Client } = pkg;
 import fs from 'fs';
