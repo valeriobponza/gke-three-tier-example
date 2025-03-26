@@ -1,55 +1,102 @@
-import { Component } from '@angular/core';
+import { Component, computed, signal, inject, OnInit } from '@angular/core';
 import { RestServiceService } from './rest-service.service';
+import { NgClass, JsonPipe } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { MatTableDataSource } from '@angular/material/table';
+import { Todo } from './model/todo';
+import { environment } from '../environments/environment';
 
-export interface PeriodicElement {
-  name: string;
-  position: number;
-  weight: number;
-  symbol: string;
-}
-
-
-
-const ELEMENT_DATA: PeriodicElement[] = [
-  { position: 1, name: 'Hydrogen', weight: 1.0079, symbol: 'H' },
-  { position: 2, name: 'Helium', weight: 4.0026, symbol: 'He' },
-  { position: 3, name: 'Lithium', weight: 6.941, symbol: 'Li' },
-  { position: 4, name: 'Beryllium', weight: 9.0122, symbol: 'Be' },
-  { position: 5, name: 'Boron', weight: 10.811, symbol: 'B' },
-  { position: 6, name: 'Carbon', weight: 12.0107, symbol: 'C' },
-  { position: 7, name: 'Nitrogen', weight: 14.0067, symbol: 'N' },
-  { position: 8, name: 'Oxygen', weight: 15.9994, symbol: 'O' },
-  { position: 9, name: 'Fluorine', weight: 18.9984, symbol: 'F' },
-  { position: 10, name: 'Neon', weight: 20.1797, symbol: 'Ne' },
-];
+const BASE_API = environment.apiUrl;
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
-export class AppComponent {
-  dataSource!: PeriodicElement[];
-  constructor(private restService: RestServiceService) { }
+export class AppComponent implements OnInit {
+  http = inject(HttpClient);
+  todos = signal<Todo[]>([]);
+  error = signal(false);
+
+  totalCompleted = computed(
+    () => this.todos().filter((t) => t.completed).length
+  );
+
+  totalTodos = computed(() => this.todos().filter((t) => !t.completed).length);
 
   ngOnInit() {
-    this.fetchUsers();
+    this.http.get<Todo[]>(`${BASE_API}/todos`).subscribe({
+      next: (res) => {
+        this.todos.set(res);
+      },
+      error: (err) => {
+        console.log('here', err);
+        this.error.set(true);
+      },
+    });
   }
 
-  fetchUsers() {
-    this.restService.fetchData()
-      .subscribe(
-        (response) => {
-          this.dataSource = response;
+  addTodo(input: HTMLInputElement) {
+    this.error.set(false);
+    this.http
+      .post<Todo>(`${BASE_API}/todos`, {
+        title: input.value,
+        completed: false,
+      })
+      .subscribe({
+        next: (newTodo) => {
+          this.http.get<Todo[]>(`${BASE_API}/todos`).subscribe({
+            next: (res) => {
+              this.todos.set(res);
+            },
+            error: (err) => {
+              console.log('here', err);
+              this.error.set(true);
+            },
+          });
+          input.value = '';
         },
-        (error) => {
-          console.error(error);
-          this.dataSource = ELEMENT_DATA;
-        }
-      );
+        error: () => {
+          this.error.set(true);
+        },
+      });
   }
 
-  title = 'angular-frontend';
-  displayedColumns: string[] = ['position', 'name', 'weight', 'symbol'];
+  removeTodo(todoToRemove: Todo) {
+    this.error.set(false);
+    this.http.delete(`${BASE_API}/todos/${todoToRemove.id}`).subscribe({
+      next: () => {
+        this.todos.update((todos) =>
+          todos.filter((todo) => todo.id !== todoToRemove.id)
+        );
+      },
+      error: () => {
+        this.error.set(true);
+      },
+    });
+  }
+
+  toggleTodo(todoToToggle: Todo) {
+    this.error.set(false);
+    this.http
+      .patch<Todo>(`${BASE_API}/todos/${todoToToggle.id}`, {
+        completed: !todoToToggle.completed,
+      })
+      .subscribe({
+        next: (res) => {
+          this.todos.update((todos) => {
+            return todos.map((t) => {
+              if (t.id === todoToToggle.id)
+                t.completed = !t.completed
+              return t
+            });
+          });
+        },
+        error: () => {
+          this.error.set(true);
+        },
+      });
+  }
 
 }
+
