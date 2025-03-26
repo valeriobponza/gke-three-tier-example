@@ -1,5 +1,6 @@
 **/.DS_STORE
-
+**/.vscode
+**/.editorconfig
 **/dist/
 **/bazel-out
 **/integration/bazel/bazel-*
