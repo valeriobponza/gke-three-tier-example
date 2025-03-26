@@ -4,7 +4,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build": "mkdir -p distapp && cp -R node_modules src server.js ... dist"
   },
   "keywords": [],
   "author": "",
